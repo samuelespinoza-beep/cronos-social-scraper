@@ -11,8 +11,8 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Version HTTP de "php artisan scrape:run", un endpoint por plataforma.
- * Pensado para pruebas manuales (Postman); devuelve el JSON scrapeado tal cual.
+ * Scraper por HTTP: un endpoint GET por plataforma (/scrape/{plataforma}).
+ * Devuelve el JSON scrapeado tal cual.
  */
 class ScrapeController extends Controller
 {
