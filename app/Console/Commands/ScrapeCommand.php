@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Services\CronosIngestClient;
 use App\Services\Facebook\FacebookService;
 use App\Services\Instagram\InstagramService;
 use App\Services\X\XService;
@@ -11,7 +10,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Orquesta el scraping de cada plataforma y empuja los datos a cronos.
+ * Orquesta el scraping de cada plataforma.
  * Lo dispara el cron de la PC cada 30 min:  php artisan scrape:run
  *
  *   php artisan scrape:run                     -> todas las plataformas
@@ -20,14 +19,13 @@ use Illuminate\Support\Facades\Log;
 class ScrapeCommand extends Command
 {
     protected $signature = 'scrape:run {--platform=all : youtube|x|instagram|facebook|all}';
-    protected $description = 'Scrapea las redes de la competencia y envia los datos a cronos';
+    protected $description = 'Scrapea las redes de la competencia';
 
     public function __construct(
         private readonly YoutubeService $youtube,
         private readonly XService $x,
         private readonly InstagramService $instagram,
         private readonly FacebookService $facebook,
-        private readonly CronosIngestClient $ingest,
     ) {
         parent::__construct();
     }
@@ -53,8 +51,7 @@ class ScrapeCommand extends Command
                     continue;
                 }
 
-                $this->ingest->push($p, $data);
-                $this->info("[{$p}] capturado y enviado a cronos.");
+                $this->info("[{$p}] capturado.");
             } catch (\Throwable $e) {
                 $this->error("[{$p}] error: " . $e->getMessage());
                 Log::error("scrape:run [{$p}]: " . $e->getMessage());

@@ -105,11 +105,4 @@ return [
         ],
     ],
 
-    // Destino del push: el endpoint de ingesta en cronos-analytics-api.
-    'cronos' => [
-        'ingest_url'   => env('CRONOS_INGEST_URL'),   // ej. https://analyticsapi.cronosglr.pe/api/v1/social/ingest
-        // Default de PRUEBAS: coincide con el de cronos-analytics-api. En prod usa CRONOS_INGEST_TOKEN.
-        'ingest_token' => env('CRONOS_INGEST_TOKEN', 'dev-ingest-token-change-in-prod'),
-    ],
-
 ];
