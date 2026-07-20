@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Log;
 class InstagramService
 {
     private const TIMEZONE = 'America/Lima';
-    private const DOC_ID = '37740078085591413';
+    private const DOC_ID = '36843822688595799';
     private const FRIENDLY_NAME = 'PolarisProfilePostsTabContentQuery_connection';
 
     private const COMET_STATIC_FIELDS = [
@@ -69,11 +69,9 @@ class InstagramService
 
         foreach ((array) config('services.instagram.accounts', []) as $key => $handle) {
             try {
-                $user = $this->resolveUser($handle);
-                if ($user === null) {
-                    Log::warning("Instagram: no se pudo resolver la cuenta '{$handle}' (key: {$key})");
-                    continue;
-                }
+                // El graphql/query de posts ya recibe el username en variables, asi que
+                // no dependemos de web_profile_info (endpoint que Meta rompe seguido).
+                $user = ['username' => ltrim($handle, '@')];
 
                 $byId = [];
                 foreach ($this->fetchTodaysPosts($handle, $tokens) as $post) {
@@ -103,31 +101,6 @@ class InstagramService
             'User-Agent'        => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
             'Accept'            => '*/*',
             'Accept-Language'   => 'es-PE,es;q=0.9',
-        ];
-    }
-
-    private function resolveUser(string $handle): ?array
-    {
-        $response = Http::withHeaders($this->headers())
-            ->withOptions(['version' => 2.0])
-            ->timeout(15)
-            ->get($this->baseUrl . 'api/v1/users/web_profile_info/', [
-                'username' => ltrim($handle, '@'),
-            ]);
-
-        if ($response->failed()) {
-            throw new \RuntimeException(
-                'Instagram web_profile_info HTTP ' . $response->status() . ': ' . $response->body()
-            );
-        }
-
-        $userNode = $response->json('data.user');
-        if (!$userNode) {
-            return null;
-        }
-
-        return [
-            'username' => $userNode['username'] ?? ltrim($handle, '@'),
         ];
     }
 
@@ -205,11 +178,12 @@ class InstagramService
                 'latest_besties_reel_media'          => true,
                 'latest_reel_media'                  => true,
             ],
-            'first'    => 12,
+            'first'                  => 12,
+            'include_multi_captions' => false,
             'last'     => null,
             'username' => ltrim($handle, '@'),
+            '__relay_internal__pv__PolarisMultiCaptionCarouselEnabledrelayprovider'   => false,
             '__relay_internal__pv__PolarisImmersiveFeedChainingEnabledrelayprovider'  => true,
-            '__relay_internal__pv__PolarisAIGMMediaWebLabelEnabledrelayprovider'      => false,
             '__relay_internal__pv__PolarisAIGMAccountLabelEnabledrelayprovider'       => false,
             '__relay_internal__pv__PolarisReelsRecoDebugOverlayEnabledrelayprovider'  => false,
         ];
