@@ -5,6 +5,11 @@
 /public/storage
 /storage/*.key
 /storage/pail
+/storage/network-capture.jsonl
+/storage/cookies-dump.json
+/storage/captures/
+/storage/app/facebook-graphql.json
+/storage/app/instagram-graphql.json
 /vendor
 .env
 .env.backup

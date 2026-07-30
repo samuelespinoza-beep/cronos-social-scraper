@@ -3,13 +3,14 @@
 namespace App\Services\Facebook;
 
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class FacebookService
 {
     private const TIMEZONE = 'America/Lima';
-    private const DOC_ID = '27635166756168083';
+    private const DOC_ID = '27823873537270233';
     private const FRIENDLY_NAME = 'ProfileCometTimelineFeedRefetchQuery';
     private const CRN = 'comet.fbweb.CometProfileTimelineListViewRoute';
     private const POSTS_PER_PAGE = 3;
@@ -21,10 +22,10 @@ class FacebookService
         '__user'      => '61586343923018',
         '__a'         => '1',
         '__req'       => '32',
-        '__hs'        => '20649.HYP:comet_pkg.2.1...0',
+        '__hs'        => '20664.HYP:comet_pkg.2.1...0',
         'dpr'         => '1',
         '__ccg'       => 'EXCELLENT',
-        '__rev'       => '1043180520',
+        '__rev'       => '1044130052',
         '__s'         => 'f9ew6k:gp7y9t:vrg4rd',
         '__hsi'       => '7662635218482664760',
         '__dyn'       => '7xeUjGU5a5Q1ryaxG4Vp41twWwIxu13wsoKbgS3q2ibwNw9G2Saw8i2S1DwUx60GE5O0BU2_CxS320qa2OU7m221Fwgo9oO0-E4a3a4oaEnxO0Bo7O2l2Utwqo5W1ywiE4u9x-3m1mzXw8W58jwGzE8FU5e3ym2SU4i5oe8cEW4-5pUfEdK1MBx_wHwdG7EbUG2-azqwt8eo88cA0Lo4q58jyUaUbGxe6Uak0zU8oC1hxB0jUpwgUjz89oeE-5oabDzUiBG2OUqwlqwLwlE7m11zU1fUaUcEK6Eqwby0QUqwRyBxO',
@@ -33,7 +34,7 @@ class FacebookService
         '__hblp'      => '1u4aJ0Tx-9wxy821o5i1Txq2a31362S1cwcy8grwNU8oK1sxS6HxbwcWcwqHAwm89o-dwBwGwBy89EkyE5m1bwVBwJwgEkwpoqyE8o6i2a5oSewhojxqVFVEoxaaxZd1u1mwqory5odrxum4ojDwMCxm9wAgnKmqEiz8Kagd8twywSwmWw49w8O7Voy3t1W6pE6e8y8985u2uax61oxa9xC223e0yo2jwZwjo1ME5K0y8eEaUowlU7C2mm0xQi19UtQi17wm87yfG0zolx2eglz8foaokwgo4K1mw8i2y0zE4i0wU5m360Fpo27wci0SoswBxm311e0AU1pU620CE18U4-cw6Cyo7u1Nw4nwPw46gmwlo9U18k1wxym18wbe1FwIw9W0Fod81fUow6hwCwRwmU724obE4i0OE1W84O0MU2GwaK360UU2ZgmCU9Ucohwu82NwMwTwQwk81fUow4HU10U6C9x62615waG586m3i0HE5u0oO0yE7y2iu0M8jzEgxS12waS58rw5BCwci0WUeEiwxwbu3G',
         '__sjsp'      => 'gb212xs5O4cp68ixaicCy4b5cggy4EGcxi4awSAoG5E7AQy2OqdcP949p1F3Z8884caEjfnE4sjd4N9NOj5Rq3sychSAl2SWbDhoN462ShBGuSaFr8e8ili8F5p88Gyj2i7oZwADxlxt54Gsly4qEigiBorgB2asQFUCV946VFQgE-250zgK9g8UlgggoxWbh89pU9F4dgjg4Awkh4310gAm0BQ250Cgb4l08B0Vwlo5F6y41tg8Uqg1gVk0BUa80Ox05eg',
         '__comet_req' => '15',
-        '__spin_r'    => '1043180520',
+        '__spin_r'    => '1044130052',
         '__spin_b'    => 'trunk',
         '__spin_t'    => '1784096290',
         '__crn'       => self::CRN,
@@ -44,15 +45,100 @@ class FacebookService
 
     private const TRACKING_CODE = 'AZaAogye4CHGaZQRZrMZh99nSoBIInmruxt59k9lcStByuLR2ssIsbrwRX4N5QFV7Y8YeyOrUjTlp7V8XipwuqLoVgV402Ryxfko5dVgROnm-nRWW1dtIlmrCK2mgonlRcooiVT-AEkaR8V5SLFSCKhjZn2OgKP4oz-8QQ7_AKHWvEDomlvJFiFa0ovrxyaN6eOlQojJy4L9IX2TC_uVEz1X';
 
+    // "Provider variables" (flags internos de Relay) que Facebook ahora exige en
+    // la consulta ProfileCometTimelineFeedRefetchQuery. Si faltan, el servidor
+    // responde: "missing_required_variable_value". Capturadas de la request real
+    // el 2026-07-30; si FB vuelve a fallar, recapturar y actualizar aqui.
+    private const RELAY_PROVIDERS = [
+        '__relay_internal__pv__GHLShouldChangeAdIdFieldNamerelayprovider'               => true,
+        '__relay_internal__pv__GHLShouldChangeSponsoredDataFieldNamerelayprovider'      => true,
+        '__relay_internal__pv__CometFeedStory_enable_reactor_facepilerelayprovider'     => false,
+        '__relay_internal__pv__CometFeedStory_enable_social_bubblesrelayprovider'       => false,
+        '__relay_internal__pv__CometFeedStory_enable_post_permalink_white_space_clickrelayprovider' => false,
+        '__relay_internal__pv__CometUFICommentActionLinksRewriteEnabledrelayprovider'   => true,
+        '__relay_internal__pv__CometUFICommentAvatarStickerAnimatedImagerelayprovider'  => false,
+        '__relay_internal__pv__IsWorkUserrelayprovider'                                 => false,
+        '__relay_internal__pv__TestPilotShouldIncludeDemoAdUseCaserelayprovider'        => false,
+        '__relay_internal__pv__FBReels_deprecate_short_form_video_context_gkrelayprovider' => true,
+        '__relay_internal__pv__FBReels_enable_view_dubbed_audio_type_gkrelayprovider'   => true,
+        '__relay_internal__pv__CometFeedShareMedia_shouldPrefetchShareImagerelayprovider' => false,
+        '__relay_internal__pv__CometImmersivePhotoCanUserDisable3DMotionrelayprovider'  => false,
+        '__relay_internal__pv__WorkCometIsEmployeeGKProviderrelayprovider'              => false,
+        '__relay_internal__pv__IsMergQAPollsrelayprovider'                              => false,
+        '__relay_internal__pv__FBReelsMediaFooter_comet_enable_reels_ads_gkrelayprovider' => true,
+        '__relay_internal__pv__CometUFIReactionsEnableShortNamerelayprovider'           => false,
+        '__relay_internal__pv__CometUFICommentAutoTranslationTyperelayprovider'         => 'AUTO_TRANSLATE',
+        '__relay_internal__pv__CometUFIShareActionMigrationrelayprovider'               => true,
+        '__relay_internal__pv__CometUFISingleLineUFIrelayprovider'                      => false,
+        '__relay_internal__pv__relay_provider_comet_ufi_ssr_seo_deferrelayprovider'     => true,
+        '__relay_internal__pv__CometUFI_dedicated_comment_routable_dialog_gkrelayprovider' => true,
+        '__relay_internal__pv__ReelsIFUCard_reelsIFULikeCountrelayprovider'             => false,
+        '__relay_internal__pv__FBReelsIFUTileContent_reelsIFUPlayOnHoverrelayprovider'  => true,
+        '__relay_internal__pv__GroupsCometGYSJFeedItemHeightrelayprovider'              => 206,
+        '__relay_internal__pv__ShouldEnableBakedInTextStoriesrelayprovider'             => false,
+        '__relay_internal__pv__StoriesShouldIncludeFbNotesrelayprovider'                => true,
+    ];
+
     private string $cUser;
     private string $xs;
     private string $baseUrl;
+
+    // Valores de la consulta GraphQL. Arrancan con los hardcodeados (respaldo) y
+    // se sobreescriben con los frescos del sanador (storage/app/facebook-graphql.json).
+    private string $docId;
+    private string $rev;
+    private string $hs;
+    private array $relayProviders;
 
     public function __construct()
     {
         $this->cUser = (string) config('services.facebook.c_user');
         $this->xs = (string) config('services.facebook.xs');
         $this->baseUrl = rtrim((string) config('services.facebook.base_url'), '/') . '/';
+        $this->loadGraphqlMeta();
+    }
+
+    /**
+     * Carga los valores de la consulta GraphQL. Usa los hardcodeados como
+     * respaldo y, si existe, los sobreescribe con el JSON que escribe el sanador.
+     */
+    private function loadGraphqlMeta(): void
+    {
+        $this->docId = self::DOC_ID;
+        $this->rev = self::COMET_STATIC_FIELDS['__rev'];
+        $this->hs = self::COMET_STATIC_FIELDS['__hs'];
+        $this->relayProviders = self::RELAY_PROVIDERS;
+
+        $path = storage_path('app/facebook-graphql.json');
+        if (!is_file($path)) {
+            return;
+        }
+
+        $meta = json_decode((string) file_get_contents($path), true);
+        if (!is_array($meta)) {
+            return;
+        }
+
+        if (!empty($meta['doc_id'])) {
+            $this->docId = (string) $meta['doc_id'];
+        }
+        if (!empty($meta['rev'])) {
+            $this->rev = (string) $meta['rev'];
+        }
+        if (!empty($meta['hs'])) {
+            $this->hs = (string) $meta['hs'];
+        }
+        if (!empty($meta['providers']) && is_array($meta['providers'])) {
+            $this->relayProviders = $meta['providers'];
+        }
+    }
+
+    /**
+     * Dispara el sanador (Chrome headless) para recapturar doc_id + variables.
+     */
+    private function healQuery(): void
+    {
+        Artisan::call('facebook:refresh-query');
     }
 
     public function sync(): array
@@ -61,9 +147,34 @@ class FacebookService
             throw new \RuntimeException('FACEBOOK_C_USER / FACEBOOK_XS no estan configurados');
         }
 
-        $tokens = $this->fetchAppTokens();
-
         $date = now(self::TIMEZONE)->toDateString();
+
+        try {
+            $tokens = $this->fetchAppTokens();
+            $accountsData = $this->scrapeAllAccounts($tokens);
+        } catch (StaleGraphqlQueryException $e) {
+            // AUTO-ARREGLO: el doc_id/variables caducaron (FB roto la consulta).
+            // Recapturamos los valores frescos y reintentamos UNA vez.
+            Log::warning('Facebook: doc_id/variables caducados. Ejecutando auto-arreglo (sanador)...');
+            $this->healQuery();
+            $this->loadGraphqlMeta();          // recargamos los valores recien capturados
+            $tokens = $this->fetchAppTokens(); // tokens de sesion frescos
+            $accountsData = $this->scrapeAllAccounts($tokens); // reintento (si vuelve a fallar, propaga)
+        }
+
+        return [
+            'date'     => $date,
+            'accounts' => $accountsData,
+        ];
+    }
+
+    /**
+     * Recorre todas las cuentas y devuelve sus posts de hoy. Los errores comunes
+     * por cuenta se loguean y se continua; pero un StaleGraphqlQueryException se
+     * propaga para que sync() dispare el auto-arreglo.
+     */
+    private function scrapeAllAccounts(array $tokens): array
+    {
         $accountsData = [];
 
         foreach ((array) config('services.facebook.accounts', []) as $key => $account) {
@@ -80,15 +191,14 @@ class FacebookService
                 }
 
                 $accountsData[$key] = array_values($byId);
+            } catch (StaleGraphqlQueryException $e) {
+                throw $e; // NO lo tragamos: dispara el auto-arreglo en sync()
             } catch (\Throwable $exception) {
                 Log::error("Facebook sync error para '{$key}': " . $exception->getMessage());
             }
         }
 
-        return [
-            'date'     => $date,
-            'accounts' => $accountsData,
-        ];
+        return $accountsData;
     }
 
     private function baseHeaders(): array
@@ -246,16 +356,23 @@ class FacebookService
             'scale'        => 1,
             'stream_count' => 1,
             'taggedInOnly' => null,
-            'trackingCode' => self::TRACKING_CODE,
+            'trackingCode' => null,
             'useDefaultActor' => false,
             'id'           => $pageId,
         ];
 
+        // Facebook exige las provider variables de Relay. Usamos las de instancia
+        // (que pueden venir frescas del sanador, o las hardcodeadas de respaldo).
+        $variables = array_merge($variables, $this->relayProviders);
+
         $body = array_merge(self::COMET_STATIC_FIELDS, [
+            '__rev'     => $this->rev,
+            '__spin_r'  => $this->rev,
+            '__hs'      => $this->hs,
             'fb_dtsg'   => $fbDtsg,
             'jazoest'   => $this->computeJazoest($fbDtsg),
             'lsd'       => $lsd,
-            'doc_id'    => self::DOC_ID,
+            'doc_id'    => $this->docId,
             'variables' => json_encode($variables),
         ]);
 
@@ -272,6 +389,11 @@ class FacebookService
             throw new \RuntimeException(
                 'Facebook graphql/query HTTP ' . $response->status() . ': ' . mb_substr($response->body(), 0, 500)
             );
+        }
+
+        // Senal de que el doc_id/variables caducaron -> dispara el auto-arreglo.
+        if (str_contains($response->body(), 'missing_required_variable_value')) {
+            throw new StaleGraphqlQueryException('Facebook: missing_required_variable_value (doc_id/variables caducados)');
         }
 
         $result = $this->parseIncrementalResponse($response->body());

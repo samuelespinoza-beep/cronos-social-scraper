@@ -89,6 +89,9 @@ return [
         'c_user'   => env('FACEBOOK_C_USER'),
         'xs'       => env('FACEBOOK_XS'),
         'base_url' => env('FACEBOOK_BASE_URL', 'https://www.facebook.com/'),
+        // Binario de Node para el auto-arreglo (sanador). En cron/servidor
+        // conviene la ruta absoluta, ej: /home/linuxbrew/.linuxbrew/bin/node
+        'node_bin' => env('FACEBOOK_NODE_BIN', 'node'),
         'accounts' => [
             'elcomercio' => [
                 'handle'  => 'elcomercio.pe',

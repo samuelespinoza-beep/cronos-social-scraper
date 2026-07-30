@@ -3,6 +3,7 @@
 namespace App\Services\Instagram;
 
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -11,6 +12,15 @@ class InstagramService
     private const TIMEZONE = 'America/Lima';
     private const DOC_ID = '36843822688595799';
     private const FRIENDLY_NAME = 'PolarisProfilePostsTabContentQuery_connection';
+
+    // Provider variables que Instagram exige en la consulta. Igual que en FB,
+    // pueden cambiar; el sanador las recaptura a storage/app/instagram-graphql.json.
+    private const RELAY_PROVIDERS = [
+        '__relay_internal__pv__PolarisMultiCaptionCarouselEnabledrelayprovider'   => false,
+        '__relay_internal__pv__PolarisImmersiveFeedChainingEnabledrelayprovider'  => true,
+        '__relay_internal__pv__PolarisAIGMAccountLabelEnabledrelayprovider'       => false,
+        '__relay_internal__pv__PolarisReelsRecoDebugOverlayEnabledrelayprovider'  => false,
+    ];
 
     private const COMET_STATIC_FIELDS = [
         'av'          => '17841441194201451',
@@ -47,6 +57,13 @@ class InstagramService
     private string $appId;
     private string $baseUrl;
 
+    // Valores de la consulta GraphQL: hardcodeados como respaldo, sobreescritos
+    // por el sanador (storage/app/instagram-graphql.json).
+    private string $docId;
+    private string $rev;
+    private string $hs;
+    private array $relayProviders;
+
     public function __construct()
     {
         $this->sessionId = (string) config('services.instagram.session_id');
@@ -54,6 +71,50 @@ class InstagramService
         $this->dsUserId = (string) config('services.instagram.ds_user_id');
         $this->appId = (string) config('services.instagram.app_id');
         $this->baseUrl = rtrim((string) config('services.instagram.base_url'), '/') . '/';
+        $this->loadGraphqlMeta();
+    }
+
+    /**
+     * Carga los valores de la consulta GraphQL. Respaldo hardcodeado + overrides
+     * frescos del sanador si el JSON existe.
+     */
+    private function loadGraphqlMeta(): void
+    {
+        $this->docId = self::DOC_ID;
+        $this->rev = self::COMET_STATIC_FIELDS['__rev'];
+        $this->hs = self::COMET_STATIC_FIELDS['__hs'];
+        $this->relayProviders = self::RELAY_PROVIDERS;
+
+        $path = storage_path('app/instagram-graphql.json');
+        if (!is_file($path)) {
+            return;
+        }
+
+        $meta = json_decode((string) file_get_contents($path), true);
+        if (!is_array($meta)) {
+            return;
+        }
+
+        if (!empty($meta['doc_id'])) {
+            $this->docId = (string) $meta['doc_id'];
+        }
+        if (!empty($meta['rev'])) {
+            $this->rev = (string) $meta['rev'];
+        }
+        if (!empty($meta['hs'])) {
+            $this->hs = (string) $meta['hs'];
+        }
+        if (!empty($meta['providers']) && is_array($meta['providers'])) {
+            $this->relayProviders = $meta['providers'];
+        }
+    }
+
+    /**
+     * Dispara el sanador (recaptura doc_id + variables desde el navegador 9222).
+     */
+    private function healQuery(): void
+    {
+        Artisan::call('instagram:refresh-query');
     }
 
     public function sync(): array
@@ -62,9 +123,32 @@ class InstagramService
             throw new \RuntimeException('INSTAGRAM_SESSION_ID / INSTAGRAM_CSRF_TOKEN / INSTAGRAM_DS_USER_ID no estan configurados');
         }
 
-        $tokens = $this->fetchAppTokens();
-
         $date = now(self::TIMEZONE)->toDateString();
+
+        try {
+            $tokens = $this->fetchAppTokens();
+            $accountsData = $this->scrapeAllAccounts($tokens);
+        } catch (StaleGraphqlQueryException $e) {
+            // AUTO-ARREGLO: el doc_id/variables caducaron. Recapturamos y reintentamos.
+            Log::warning('Instagram: doc_id/variables caducados. Ejecutando auto-arreglo (sanador)...');
+            $this->healQuery();
+            $this->loadGraphqlMeta();
+            $tokens = $this->fetchAppTokens();
+            $accountsData = $this->scrapeAllAccounts($tokens);
+        }
+
+        return [
+            'date'     => $date,
+            'accounts' => $accountsData,
+        ];
+    }
+
+    /**
+     * Recorre todas las cuentas. Errores comunes por cuenta se loguean; un
+     * StaleGraphqlQueryException se propaga para disparar el auto-arreglo.
+     */
+    private function scrapeAllAccounts(array $tokens): array
+    {
         $accountsData = [];
 
         foreach ((array) config('services.instagram.accounts', []) as $key => $handle) {
@@ -79,15 +163,14 @@ class InstagramService
                 }
 
                 $accountsData[$key] = array_values($byId);
+            } catch (StaleGraphqlQueryException $e) {
+                throw $e; // NO lo tragamos: dispara el auto-arreglo en sync()
             } catch (\Throwable $exception) {
                 Log::error("Instagram sync error para '{$key}': " . $exception->getMessage());
             }
         }
 
-        return [
-            'date'     => $date,
-            'accounts' => $accountsData,
-        ];
+        return $accountsData;
     }
 
     private function headers(): array
@@ -182,17 +265,19 @@ class InstagramService
             'include_multi_captions' => false,
             'last'     => null,
             'username' => ltrim($handle, '@'),
-            '__relay_internal__pv__PolarisMultiCaptionCarouselEnabledrelayprovider'   => false,
-            '__relay_internal__pv__PolarisImmersiveFeedChainingEnabledrelayprovider'  => true,
-            '__relay_internal__pv__PolarisAIGMAccountLabelEnabledrelayprovider'       => false,
-            '__relay_internal__pv__PolarisReelsRecoDebugOverlayEnabledrelayprovider'  => false,
         ];
 
+        // Provider variables (de instancia: frescas del sanador o de respaldo).
+        $variables = array_merge($variables, $this->relayProviders);
+
         $body = array_merge(self::COMET_STATIC_FIELDS, [
+            '__rev'    => $this->rev,
+            '__spin_r' => $this->rev,
+            '__hs'     => $this->hs,
             'fb_dtsg'  => $fbDtsg,
             'jazoest'  => $this->computeJazoest($fbDtsg),
             'lsd'      => $lsd,
-            'doc_id'   => self::DOC_ID,
+            'doc_id'   => $this->docId,
             'variables' => json_encode($variables),
         ]);
 
@@ -206,18 +291,26 @@ class InstagramService
             ->post($this->baseUrl . 'graphql/query', $body);
 
         if ($response->failed()) {
-            throw new \RuntimeException(
-                'Instagram graphql/query HTTP ' . $response->status() . ': ' . mb_substr($response->body(), 0, 500)
+            // Un fallo aqui (tipicamente HTTP 400) casi siempre significa que el
+            // doc_id fue retirado por Instagram -> disparamos el auto-arreglo.
+            Log::warning('Instagram graphql/query HTTP ' . $response->status() . ' (posible doc_id caducado)', [
+                'handle'   => $handle,
+                'response' => mb_substr($response->body(), 0, 300),
+            ]);
+            throw new StaleGraphqlQueryException(
+                'Instagram graphql/query HTTP ' . $response->status() . ' (doc_id/variables caducados)'
             );
         }
 
         $data = $response->json('data');
         if (!$data) {
-            Log::warning('Instagram graphql/query: respuesta sin "data" (fb_dtsg/lsd vencido o doc_id desactualizado)', [
+            // Sin "data" = doc_id/variables caducados (o sesion vencida). Disparamos
+            // el auto-arreglo; si tras sanar sigue fallando, propagara el error.
+            Log::warning('Instagram graphql/query: respuesta sin "data" (doc_id caducado o sesion vencida)', [
                 'handle'   => $handle,
-                'response' => mb_substr($response->body(), 0, 1000),
+                'response' => mb_substr($response->body(), 0, 500),
             ]);
-            return [];
+            throw new StaleGraphqlQueryException('Instagram: respuesta sin data (doc_id/variables caducados)');
         }
 
         $edges = $this->extractEdges($data);
