@@ -35,6 +35,14 @@ return [
         ],
     ],
 
+    // Graph API OFICIAL de Meta. Usada por InstagramGraphService (business_discovery)
+    // en la ruta /api/scrape/instagram2. Convive con el scraping no oficial de abajo.
+    'meta' => [
+        'graph_version'  => env('META_GRAPH_VERSION', 'v21.0'),
+        'page_token'     => env('META_PAGE_TOKEN'),
+        'ig_business_id' => env('META_IG_BUSINESS_ID'),
+    ],
+
     // --- Mismas claves que en cronos-analytics-api, para copiar los servicios 1:1 ---
     'youtube' => [
         'api_key'  => env('YOUTUBE_API_KEY'),

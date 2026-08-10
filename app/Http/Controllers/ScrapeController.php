@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\Facebook\FacebookService;
+// use App\Services\Facebook\FacebookService; // Facebook scraping deshabilitado temporalmente
 use App\Services\Instagram\InstagramService;
 use App\Services\X\XService;
 use App\Services\Youtube\YoutubeService;
@@ -20,7 +20,7 @@ class ScrapeController extends Controller
         private readonly YoutubeService $youtube,
         private readonly XService $x,
         private readonly InstagramService $instagram,
-        private readonly FacebookService $facebook,
+        // private readonly FacebookService $facebook, // Facebook scraping deshabilitado temporalmente
     ) {
     }
 
@@ -39,10 +39,12 @@ class ScrapeController extends Controller
         return $this->runPlatform('instagram', fn () => $this->instagram->sync());
     }
 
-    public function facebook(): JsonResponse
-    {
-        return $this->runPlatform('facebook', fn () => $this->facebook->sync());
-    }
+    // Facebook scraping DESHABILITADO temporalmente (cuenta marcada por Meta).
+    // Reactivar junto con el import, la inyeccion del constructor y la ruta en routes/api.php.
+    // public function facebook(): JsonResponse
+    // {
+    //     return $this->runPlatform('facebook', fn () => $this->facebook->sync());
+    // }
 
     private function runPlatform(string $platform, callable $sync): JsonResponse
     {
