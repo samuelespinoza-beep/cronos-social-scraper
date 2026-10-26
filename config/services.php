@@ -98,6 +98,15 @@ return [
         'detail_limit' => env('STORYFUL_DETAIL_LIMIT', 10),
     ],
 
+    // API JSON publica de viory.video: no necesita credenciales.
+    // locale "en" = catalogo completo; "es" = solo videos ya traducidos.
+    'viory' => [
+        'base_url'     => env('VIORY_BASE_URL', 'https://www.viory.video/'),
+        'locale'       => env('VIORY_LOCALE', 'en'),
+        'per_page'     => env('VIORY_PER_PAGE', 20),
+        'detail_limit' => env('VIORY_DETAIL_LIMIT', 10),
+    ],
+
     // Scraping no oficial de Paginas de Facebook (motor Comet). c_user/xs son
     // cookies de una cuenta logueada. page_id = ID numerico de cada Pagina.
     'facebook' => [

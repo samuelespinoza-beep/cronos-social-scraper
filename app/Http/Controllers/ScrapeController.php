@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 // use App\Services\Facebook\FacebookService; // Facebook scraping deshabilitado temporalmente
 use App\Services\Instagram\InstagramService;
 use App\Services\Storyful\StoryfulService;
+use App\Services\Viory\VioryService;
 use App\Services\X\XService;
 use App\Services\Youtube\YoutubeService;
 use Illuminate\Http\JsonResponse;
@@ -22,6 +23,7 @@ class ScrapeController extends Controller
         private readonly XService $x,
         private readonly InstagramService $instagram,
         private readonly StoryfulService $storyful,
+        private readonly VioryService $viory,
         // private readonly FacebookService $facebook, // Facebook scraping deshabilitado temporalmente
     ) {
     }
@@ -44,6 +46,11 @@ class ScrapeController extends Controller
     public function storyful(): JsonResponse
     {
         return $this->runPlatform('storyful', fn () => $this->storyful->sync());
+    }
+
+    public function viory(): JsonResponse
+    {
+        return $this->runPlatform('viory', fn () => $this->viory->sync());
     }
 
     // Facebook scraping DESHABILITADO temporalmente (cuenta marcada por Meta).
