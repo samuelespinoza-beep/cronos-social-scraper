@@ -91,6 +91,13 @@ return [
         ],
     ],
 
+    'storyful' => [
+        'session'      => env('STORYFUL_SESSION'),
+        'cf_clearance' => env('STORYFUL_CF_CLEARANCE'),
+        'base_url'     => env('STORYFUL_BASE_URL', 'https://newswire.storyful.com/'),
+        'detail_limit' => env('STORYFUL_DETAIL_LIMIT', 10),
+    ],
+
     // Scraping no oficial de Paginas de Facebook (motor Comet). c_user/xs son
     // cookies de una cuenta logueada. page_id = ID numerico de cada Pagina.
     'facebook' => [

@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/scrape/youtube', [ScrapeController::class, 'youtube']);
 Route::get('/scrape/x', [ScrapeController::class, 'x']);
 Route::get('/scrape/instagram', [ScrapeController::class, 'instagram']);
+// PRUEBA: Storyful Newswire con la sesion del navegador (la via oficial es el MRSS).
+Route::get('/scrape/storyful', [ScrapeController::class, 'storyful']);
 // Facebook DESHABILITADO temporalmente: la cuenta fue marcada por Meta por scraping.
 // Reactivar (descomentar aqui y en ScrapeController) cuando corresponda.
 // Route::get('/scrape/facebook', [ScrapeController::class, 'facebook']);
